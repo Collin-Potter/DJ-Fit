@@ -13,17 +13,24 @@
 
 package com.example.dj_fit;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.design.widget.BottomNavigationView;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.Gravity;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
+import android.view.animation.LinearInterpolator;
+import android.view.animation.RotateAnimation;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
@@ -53,6 +60,7 @@ public class ClientRequestsActivity extends BaseActivity
     private int integer = 1;
     private RelativeLayout clientReqLayout;
     private TextView titleText;
+    private ImageView splashImage;
     private String userID;
     private FirebaseFirestore mDatabase;
 
@@ -66,11 +74,44 @@ public class ClientRequestsActivity extends BaseActivity
         //Views and variables initialization
         clientReqLayout = findViewById(R.id.clientReqLayout);
         titleText = findViewById(R.id.titleText);
+        splashImage = findViewById(R.id.splashImage);
+
 
         userID = FirebaseAuth.getInstance().getUid();
         mDatabase = FirebaseFirestore.getInstance();
 
+        final RotateAnimation rotateAnimation = new RotateAnimation(0f, 720f,
+                Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f);
+        rotateAnimation.setDuration(5000);
+        rotateAnimation.setInterpolator(new LinearInterpolator());
+
+        splashImage.startAnimation(rotateAnimation);
+
         checkForNewClients();
+
+        BottomNavigationView bottomNavigationItemView = findViewById(R.id.bottomNavigationItemView);
+        bottomNavigationItemView.setOnNavigationItemSelectedListener(new BottomNavigationView.OnNavigationItemSelectedListener() {
+            @Override
+            public boolean onNavigationItemSelected(@NonNull MenuItem menuItem)
+            {
+                switch(menuItem.getItemId())
+                {
+                    case R.id.ic_back:
+                        Intent clientReqIntent = new Intent(getApplicationContext(), TrainerMenuActivity.class);
+                        startActivity(clientReqIntent);
+                        break;
+                    case R.id.ic_home:
+                        Intent homeIntent = new Intent(getApplicationContext(), MainActivity.class);
+                        startActivity(homeIntent);
+                        break;
+                    case R.id.ic_training:
+                        Intent trainerIntent = new Intent(getApplicationContext(), TrainerMenuActivity.class);
+                        startActivity(trainerIntent);
+                        break;
+                }
+                return false;
+            }
+        });
 
     }
 
@@ -103,9 +144,15 @@ public class ClientRequestsActivity extends BaseActivity
                     {
                         populatePossibleClients(documents);
                     }
+                    else
+                    {
+                        closeSplashScreen();
+
+                    }
                 }
                 else
                 {
+                    closeSplashScreen();
                     Log.d(TAG, "Error getting documents: ", task.getException());
                 }
             }
@@ -178,6 +225,7 @@ public class ClientRequestsActivity extends BaseActivity
             butLayout.addView(declineBut);
             clientReqLayout.addView(butLayout);
         }
+        closeSplashScreen();
     }
 
 
@@ -356,5 +404,26 @@ public class ClientRequestsActivity extends BaseActivity
                     }
                 });
 
+    }
+
+    /*
+     *@Name: Close Splash Screen
+     *
+     *@Purpose: Removes Splash Image to show background
+     *
+     *@Param N/A
+     *
+     *@Brief: Sets splash image visibility to gone and the other elements to visible.
+     *        Also ends splash image spin animation. The result is that the outline
+     *        elements are now shown.
+     *
+     *@ErrorsHandled: N/A
+     */
+    private void closeSplashScreen()
+    {
+        splashImage.clearAnimation();
+        splashImage.setVisibility(View.GONE);
+        titleText.setVisibility(View.VISIBLE);
+        clientReqLayout.setVisibility(View.VISIBLE);
     }
 }

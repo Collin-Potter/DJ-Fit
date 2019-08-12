@@ -15,13 +15,21 @@
 
 package com.example.dj_fit;
 
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
+import android.support.design.widget.BottomNavigationView;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.view.MenuItem;
 import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.LinearInterpolator;
+import android.view.animation.RotateAnimation;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -51,6 +59,7 @@ public class BackgroundActivity extends BaseActivity {
     private static final String TAG = "BackgroundActivity";
     private EditText currentFitEdit, goalEdit, medicalEdit,
                      availabilityEdit, additionalEdit;
+    private boolean isOwner = false;
     private String userID;
     private Button btnSubmit;
     private ScrollView backgroundScroll;
@@ -80,10 +89,17 @@ public class BackgroundActivity extends BaseActivity {
         userID = getIntent().getStringExtra("clientID");
         if(userID == null)
         {
+            isOwner = true;
             userID = FirebaseAuth.getInstance().getUid();
         }
-
         mDatabase = FirebaseFirestore.getInstance();
+
+        final RotateAnimation rotateAnimation = new RotateAnimation(0f, 720f,
+                Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f);
+        rotateAnimation.setDuration(5000);
+        rotateAnimation.setInterpolator(new LinearInterpolator());
+        splashImage.startAnimation(rotateAnimation);
+
         checkIfBackgroundExists();
 
 
@@ -95,12 +111,48 @@ public class BackgroundActivity extends BaseActivity {
             }
         });
 
-        FloatingActionButton fab = findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
+        BottomNavigationView bottomNavigationItemView = findViewById(R.id.bottomNavigationItemView);
+        bottomNavigationItemView.setOnNavigationItemSelectedListener(new BottomNavigationView.OnNavigationItemSelectedListener() {
             @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
+            public boolean onNavigationItemSelected(@NonNull MenuItem menuItem)
+            {
+                switch(menuItem.getItemId())
+                {
+                    case R.id.ic_back:
+                        if(isOwner)
+                        {
+                            Intent homeIntent = new Intent(getApplicationContext(), MainActivity.class);
+                            startActivity(homeIntent);
+                        }
+                        else
+                        {
+                            Intent clientIntent = new Intent(getApplicationContext(), ClientProgramActivity.class);
+                            clientIntent.putExtra("clientTag", getIntent().getStringExtra("clientTag"));
+                            startActivity(clientIntent);
+                        }
+                        break;
+                    case R.id.ic_home:
+                        Intent homeIntent2 = new Intent(getApplicationContext(), MainActivity.class);
+                        startActivity(homeIntent2);
+                        break;
+                    case R.id.ic_training:
+                        //Checks to see if the user is currently a trainer
+                        final SharedPreferences myPreferences =
+                                PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+                        String trainerCode = myPreferences.getString("trainerCode", "");
+                        if(!trainerCode.equals("false"))
+                        {
+                            Intent trainerIntent = new Intent(getApplicationContext(), TrainerMenuActivity.class);
+                            startActivity(trainerIntent);
+                        }
+                        else
+                        {
+                            Intent becomeTrainerIntent = new Intent(getApplicationContext(), BecomeTrainerActivity.class);
+                            startActivity(becomeTrainerIntent);
+                        }
+                        break;
+                }
+                return false;
             }
         });
     }
@@ -130,6 +182,8 @@ public class BackgroundActivity extends BaseActivity {
                 if (e != null)
                 {
                     Log.w(TAG, "Listen failed", e);
+                    closeSplashScreen();
+
                 }
                 if (documentSnapshot != null && documentSnapshot.exists())
                 {
@@ -141,10 +195,8 @@ public class BackgroundActivity extends BaseActivity {
                 else
                 {
                     Log.d (TAG, "Current data: null");
-                    splashImage.setVisibility(View.GONE);
-                    backgroundScroll.setVisibility(View.VISIBLE);
-                    backgroundText.setVisibility(View.VISIBLE);
-                    backgroundBtn.setVisibility(View.VISIBLE);                }
+                    closeSplashScreen();
+                }
             }
         });
     }
@@ -251,6 +303,7 @@ public class BackgroundActivity extends BaseActivity {
     private void closeSplashScreen()
     {
         splashImage.setVisibility(View.GONE);
+        splashImage.clearAnimation();
         backgroundScroll.setVisibility(View.VISIBLE);
         backgroundText.setVisibility(View.VISIBLE);
         backgroundBtn.setVisibility(View.VISIBLE);
